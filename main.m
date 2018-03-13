@@ -1,4 +1,5 @@
 function main(dimension,n_anchor,n_sensor,method,r ,plot)
+  rng(2018)
 	  % first generate anchors n_anchor recommended to be around 4
   anchor = 4*rand(dimension, n_anchor) - 2;
 
@@ -69,6 +70,36 @@ function main(dimension,n_anchor,n_sensor,method,r ,plot)
       grad_f = @(Y) gradient(Y, anchor, D_sq, hat_D_sq, N_x_adj, N_a_adj);
       [value, X] = bb(f, grad_f, zeros(size(sensor)), 1, 1e-5);
       value
+    case 'SDP-LS'
+      cvx_begin sdp quiet
+      variable Z(dimension+n_sensor,dimension+n_sensor) semidefinite
+      minimize(1)
+      subject to
+      Z(1:dimension,1:dimension) == eye(dimension);
+      for i = 1:n_sensor
+	neighbor_x = N_x_adj{i};
+	neighbor_a = N_a_adj{i};
+	for j = 1:size(neighbor_x,1)
+	  l = neighbor_x(j);
+	  Z(dimension+i,dimension+i) + Z(dimension+l,dimension+l) - 2*Z(dimension+i,dimension+l) == D_sq(i,l);
+	end
+	for k = 1:size(neighbor_a,1)
+	  l = neighbor_a(k);
+	  indicator = zeros(n_sensor,1);
+	  indicator(i) = -1;
+	  vec = [anchor(:,l); indicator];
+	  quad_form(vec,Z) == hat_D_sq(l,i);
+	end
+      end
+      Z >= 0;
+      cvx_end
+      
+      X = Z(1:dimension,dimension+1:end);
+      f = @(Y) compute_value(Y,anchor,D_sq,hat_D_sq, N_x_adj,N_a_adj);
+      grad_f = @(Y) gradient(Y, anchor, D_sq, hat_D_sq, N_x_adj, N_a_adj);
+      [value, X] = bb(f, grad_f,X , 1, 1e-5);
+      value
+      
   end
 
   %sensor
@@ -76,6 +107,8 @@ function main(dimension,n_anchor,n_sensor,method,r ,plot)
   if plot
     color = [repmat([1,0,0],n_sensor,1); repmat([0,1,1],n_anchor,1); repmat([0,0,1],n_sensor,1)];
     scatter([sensor(1,:), anchor(1,:), X(1,:)], [sensor(2,:),anchor(2,:), X(2,:)],25,color,'filled');
+    xlim([-4,4]);
+    ylim([-4,4]);
   end
  %X
  %anchor
