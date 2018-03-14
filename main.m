@@ -1,12 +1,12 @@
 function main(dimension,n_anchor,n_sensor,method,r ,plot)
   rng(2018)
-	  % first generate anchors n_anchor recommended to be around 4
+  % first generate anchors n_anchor recommended to be around 4
   anchor = 4*rand(dimension, n_anchor) - 2;
 
-% Now generate the sensors randomly, n_sensor recommended to be greater than 10
+  % Now generate the sensors randomly, n_sensor recommended to be greater than 10
   sensor = 4*rand(dimension, n_sensor) - 2;
 
-				% Now compute distances square
+  % Now compute distances square
   inner_product_matrix = sensor'*sensor;
   sensor_norm = diag(inner_product_matrix);
   D_sq = sensor_norm*ones(1,n_sensor) + ones(n_sensor,1)*sensor_norm' - 2*inner_product_matrix;
@@ -14,7 +14,8 @@ function main(dimension,n_anchor,n_sensor,method,r ,plot)
   anchor_norm = sum(anchor.^2,1)';
   hat_D_sq = anchor_norm*ones(1,n_sensor) + ones(n_anchor,1)*sensor_norm' - 2*anchor'*sensor;
   N_a = hat_D_sq < r^2;
-		    % Construct adjacency list between x's and x and a
+  
+  % Construct adjacency list between x's and x and a
   N_x_adj = cell(n_sensor,1); % the ith element of this cell is a list of sensors that are neighbours with i
   N_a_adj = cell(n_sensor,1); % the ith element of this cell is a list of anchors that are neighbours with i
   for i = 1:n_sensor
@@ -29,18 +30,19 @@ function main(dimension,n_anchor,n_sensor,method,r ,plot)
       minimize(1)
       subject to
       for i = 1:n_sensor
-	neighbor_x = N_x_adj{i};
-	neighbor_a = N_a_adj{i};
-	for j = 1:size(neighbor_x,1)
-	  l = neighbor_x(j);
-	  norm(X(:,i) - X(:,l)) <= sqrt(D_sq(i,l));
-	end
-	for k = 1:size(neighbor_a,1)
-	  l = neighbor_a(k);
-	  norm(X(:,i) - anchor(:,l)) <= sqrt(hat_D_sq(l,i));
-	end
+        neighbor_x = N_x_adj{i};
+        neighbor_a = N_a_adj{i};
+        for j = 1:size(neighbor_x,1)
+          l = neighbor_x(j);
+          norm(X(:,i) - X(:,l)) <= sqrt(D_sq(i,l));
+        end
+        for k = 1:size(neighbor_a,1)
+          l = neighbor_a(k);
+          norm(X(:,i) - anchor(:,l)) <= sqrt(hat_D_sq(l,i));
+        end
       end
       cvx_end
+      
     case 'SDP'
       cvx_begin sdp quiet
       variable Z(dimension+n_sensor,dimension+n_sensor) semidefinite
@@ -48,28 +50,30 @@ function main(dimension,n_anchor,n_sensor,method,r ,plot)
       subject to
       Z(1:dimension,1:dimension) == eye(dimension);
       for i = 1:n_sensor
-	neighbor_x = N_x_adj{i};
-	neighbor_a = N_a_adj{i};
-	for j = 1:size(neighbor_x,1)
-	  l = neighbor_x(j);
-	  Z(dimension+i,dimension+i) + Z(dimension+l,dimension+l) - 2*Z(dimension+i,dimension+l) == D_sq(i,l);
-	end
-	for k = 1:size(neighbor_a,1)
-	  l = neighbor_a(k);
-	  indicator = zeros(n_sensor,1);
-	  indicator(i) = -1;
-	  vec = [anchor(:,l); indicator];
-	  quad_form(vec,Z) == hat_D_sq(l,i);
-	end
+        neighbor_x = N_x_adj{i};
+        neighbor_a = N_a_adj{i};
+        for j = 1:size(neighbor_x,1)
+          l = neighbor_x(j);
+          Z(dimension+i,dimension+i) + Z(dimension+l,dimension+l) - 2*Z(dimension+i,dimension+l) == D_sq(i,l);
+        end
+        for k = 1:size(neighbor_a,1)
+          l = neighbor_a(k);
+          indicator = zeros(n_sensor,1);
+          indicator(i) = -1;
+          vec = [anchor(:,l); indicator];
+          quad_form(vec,Z) == hat_D_sq(l,i);
+        end
       end
       Z >= 0;
       cvx_end
       X = Z(1:dimension,dimension+1:end);
+      
     case 'LS'
       f = @(Y) compute_value(Y,anchor,D_sq,hat_D_sq, N_x_adj,N_a_adj);
       grad_f = @(Y) gradient(Y, anchor, D_sq, hat_D_sq, N_x_adj, N_a_adj);
       [value, X] = bb(f, grad_f, zeros(size(sensor)), 1, 1e-5);
       value
+      
     case 'SDP-LS'
       cvx_begin sdp quiet
       variable Z(dimension+n_sensor,dimension+n_sensor) semidefinite
@@ -77,19 +81,19 @@ function main(dimension,n_anchor,n_sensor,method,r ,plot)
       subject to
       Z(1:dimension,1:dimension) == eye(dimension);
       for i = 1:n_sensor
-	neighbor_x = N_x_adj{i};
-	neighbor_a = N_a_adj{i};
-	for j = 1:size(neighbor_x,1)
-	  l = neighbor_x(j);
-	  Z(dimension+i,dimension+i) + Z(dimension+l,dimension+l) - 2*Z(dimension+i,dimension+l) == D_sq(i,l);
-	end
-	for k = 1:size(neighbor_a,1)
-	  l = neighbor_a(k);
-	  indicator = zeros(n_sensor,1);
-	  indicator(i) = -1;
-	  vec = [anchor(:,l); indicator];
-	  quad_form(vec,Z) == hat_D_sq(l,i);
-	end
+        neighbor_x = N_x_adj{i};
+        neighbor_a = N_a_adj{i};
+        for j = 1:size(neighbor_x,1)
+          l = neighbor_x(j);
+          Z(dimension+i,dimension+i) + Z(dimension+l,dimension+l) - 2*Z(dimension+i,dimension+l) == D_sq(i,l);
+        end
+        for k = 1:size(neighbor_a,1)
+          l = neighbor_a(k);
+          indicator = zeros(n_sensor,1);
+          indicator(i) = -1;
+          vec = [anchor(:,l); indicator];
+          quad_form(vec,Z) == hat_D_sq(l,i);
+        end
       end
       Z >= 0;
       cvx_end

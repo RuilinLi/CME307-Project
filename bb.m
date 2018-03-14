@@ -11,24 +11,24 @@ function [result, x] = bb(f, grad_f, x0, alpha0, eps)
     
     dir = grad_f(x);
     
-				% Break if gradient is small
+    % Break if gradient is small
     if norm(dir,'fro') < eps
       break;
     end
 
-				% Compute new position
+    % Compute new position
     delta_x = x - x_last;
     delta_grad = grad_f(x) - grad_f(x_last);
     
     alpha = delta_x(:)' * delta_grad(:) / (delta_grad(:)' * delta_grad(:));
     x_new = x - alpha * grad_f(x);
 
-				% Update position
+    % Update position
     x_last = x;
     x = x_new;
     result = f(x);
     
-			 % Break if change in position is small enough
+     % Break if change in position is small enough
     if (norm(x - x_last) < eps)
       break;
     end
