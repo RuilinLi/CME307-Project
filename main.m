@@ -1,4 +1,4 @@
-function main(dimension,n_anchor,n_sensor,method,r ,plot)
+function main(dimension,n_anchor,n_sensor,method, r ,plot)
   rng(2018)
   % first generate anchors n_anchor recommended to be around 4
   anchor = 4*rand(dimension, n_anchor) - 2;
@@ -69,7 +69,7 @@ function main(dimension,n_anchor,n_sensor,method,r ,plot)
       X = Z(1:dimension,dimension+1:end);
       
     case 'LS'
-      f = @(Y) compute_value(Y,anchor,D_sq,hat_D_sq, N_x_adj,N_a_adj);
+      f = @(Y) compute_value(Y, anchor, D_sq, hat_D_sq, N_x_adj, N_a_adj);
       grad_f = @(Y) gradient(Y, anchor, D_sq, hat_D_sq, N_x_adj, N_a_adj);
       [value, X] = bb(f, grad_f, zeros(size(sensor)), 1, 1e-5);
       value
@@ -104,6 +104,11 @@ function main(dimension,n_anchor,n_sensor,method,r ,plot)
       [value, X] = bb(f, grad_f,X , 1, 1e-5);
       value
       
+    case 'ADMM'
+          
+      beta = 1;
+      eps = 1E-4;
+      result = admm(D_sq, hat_D_sq, anchor, N_x_adj, N_a_adj, beta, eps); 
   end
 
   %sensor
