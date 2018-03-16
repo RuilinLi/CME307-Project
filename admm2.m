@@ -2,12 +2,18 @@ function [X] = admm2(D_sq, hat_D_sq, anchors, N_x_adj, N_a_adj, beta, eps, true_
     max_it = 100;
     alpha0 = 1;
     
+    objective_f(true_x(:), true_x(:), D_sq, hat_D_sq, anchors, N_x_adj, N_a_adj)
+    gradient_X_f(true_x(:), true_x(:), D_sq, hat_D_sq, anchors, N_x_adj, N_a_adj)
+    
     n_verts = size(D_sq, 1);
     d = size(anchors, 1);
     
-    X = zeros(d * n_verts, 1);
-    Y = zeros(d * n_verts, 1);
-    S = zeros(d * n_verts, 1);
+    %X = randn(d * n_verts, 1);
+    %Y = randn(d * n_verts, 1);
+    
+    X = true_x(:);
+    Y = true_x(:);
+    S = randn(d * n_verts, 1);
     
     for i = 1:max_it
         % Solve system in X
@@ -15,14 +21,14 @@ function [X] = admm2(D_sq, hat_D_sq, anchors, N_x_adj, N_a_adj, beta, eps, true_
             N_x_adj, N_a_adj, beta);
         grad_f = @(x_) gradient_X_lagrangian(x_, Y, S, D_sq, hat_D_sq, ...
             anchors, N_x_adj, N_a_adj, beta);
-        [~, X] = bb(f, grad_f, X, alpha0, eps);
+        [~, X] = bb(f, grad_f, X, alpha0, eps, 100);
         
         % Solve system in Y
         f = @(y_) lagrangian(X, y_, S, D_sq, hat_D_sq, anchors, ...
             N_x_adj, N_a_adj, beta);
         grad_f = @(y_) gradient_Y_lagrangian(X, y_, S, D_sq, hat_D_sq, ...
             anchors, N_x_adj, N_a_adj, beta);
-        [~, Y] = bb(f, grad_f, Y, alpha0, eps);
+        [~, Y] = bb(f, grad_f, Y, alpha0, eps, 100);
         
         % Update dual variables
         S = S - beta * (X - Y);
@@ -53,8 +59,7 @@ function [val] = objective_f(X, Y, D_sq, hat_D_sq, anchors, N_x_adj, N_a_adj)
 
         % Sum over adjacent anchors
         for j = N_a_adj{i}'
-            j_range = (d * (j - 1) + 1):(d * j);
-            aj = anchors(:, j_range);
+            aj = anchors(:, j);
 
             val = val + ((aj - xi)' * (aj - yi) - hat_D_sq(j, i))^2;
         end
@@ -96,8 +101,7 @@ function [grad] = gradient_X_f(X, Y, D_sq, hat_D_sq, anchors, N_x_adj, N_a_adj)
         
         % Sum over adjacent anchors
         for j = N_a_adj{i}'
-            j_range = (d * (j - 1) + 1):(d * j);
-            aj = anchors(:, j_range);
+            aj = anchors(:, j);
 
             grad(i_range) = grad(i_range) - ...
                 2 * xi * ((aj - xi)' * (aj - yi) - hat_D_sq(j, i));
@@ -105,13 +109,15 @@ function [grad] = gradient_X_f(X, Y, D_sq, hat_D_sq, anchors, N_x_adj, N_a_adj)
     end
 end
 
+% Compute the gradient of the lagrangian in X
 function [grad] = gradient_X_lagrangian(X, Y, S, D_sq, hat_D_sq, anchors, ...
     N_x_adj, N_a_adj, beta)
     grad = gradient_X_f(X, Y, D_sq, hat_D_sq, anchors, N_x_adj, N_a_adj) - ...
         S' * X + beta * (X - Y);
 end
 
-function [grad] = gradient_Y_lagrangian(X, Y, D_sq, hat_D_sq, anchors, ...
+% Compute the gradient of the lagrangian in Y
+function [grad] = gradient_Y_lagrangian(X, Y, S, D_sq, hat_D_sq, anchors, ...
     N_x_adj, N_a_adj, beta)
     grad = gradient_X_f(X, Y, D_sq, hat_D_sq, anchors, N_x_adj, N_a_adj) + ...
         S' * Y + beta * (X - Y);

@@ -1,9 +1,8 @@
-function [result, x] = bb(f, grad_f, x0, alpha0, eps)
+function [result, x] = bb(f, grad_f, x0, alpha0, eps, max_it)
   % Some adaptation is applied to this function
   x_last = x0;
   x = x_last - alpha0 * grad_f(x_last);
-  
-  max_it = 10000;
+
   result = f(x);
   
   for it = 1:max_it
