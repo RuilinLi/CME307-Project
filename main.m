@@ -1,4 +1,4 @@
-function main(dimension,n_anchor,n_sensor,method, r ,plot)
+function main(dimension,n_anchor,n_sensor,method, r, plot)
   rng(2018)
   % first generate anchors n_anchor recommended to be around 4
   anchor = 4*rand(dimension, n_anchor) - 2;
@@ -11,6 +11,7 @@ function main(dimension,n_anchor,n_sensor,method, r ,plot)
   sensor_norm = diag(inner_product_matrix);
   D_sq = sensor_norm*ones(1,n_sensor) + ones(n_sensor,1)*sensor_norm' - 2*inner_product_matrix;
   N_x = D_sq < r^2;
+  N_x = N_x - diag(diag(N_x)); % Diagonals should be zero.
   anchor_norm = sum(anchor.^2,1)';
   hat_D_sq = anchor_norm*ones(1,n_sensor) + ones(n_anchor,1)*sensor_norm' - 2*anchor'*sensor;
   N_a = hat_D_sq < r^2;
@@ -71,7 +72,7 @@ function main(dimension,n_anchor,n_sensor,method, r ,plot)
     case 'LS'
       f = @(Y) compute_value(Y, anchor, D_sq, hat_D_sq, N_x_adj, N_a_adj);
       grad_f = @(Y) gradient(Y, anchor, D_sq, hat_D_sq, N_x_adj, N_a_adj);
-      [value, X] = bb(f, grad_f, zeros(size(sensor)), 1, 1e-5);
+      [value, X] = bb(f, grad_f, zeros(size(sensor)), 1, 1e-5, 10000);
       value
       
     case 'SDP-LS'
@@ -101,14 +102,14 @@ function main(dimension,n_anchor,n_sensor,method, r ,plot)
       X = Z(1:dimension,dimension+1:end);
       f = @(Y) compute_value(Y,anchor,D_sq,hat_D_sq, N_x_adj,N_a_adj);
       grad_f = @(Y) gradient(Y, anchor, D_sq, hat_D_sq, N_x_adj, N_a_adj);
-      [value, X] = bb(f, grad_f,X , 1, 1e-5);
+      [value, X] = bb(f, grad_f,X , 1, 1e-5, 10000);
       disp(value)
       
     case 'ADMM'
           
-      beta = 0.1;
-      eps = 1E-4;
-      X = admm(D_sq, hat_D_sq, anchor, N_x_adj, N_a_adj, beta, eps, sensor);
+      beta = 1;
+      eps = 1E-2;
+      X = admm2(D_sq, hat_D_sq, anchor, N_x_adj, N_a_adj, beta, eps, sensor);
       f = @(Y) compute_value(Y,anchor,D_sq,hat_D_sq, N_x_adj,N_a_adj);
       X = reshape(X, [dimension, size(sensor, 2)]);
       disp(f(X))
