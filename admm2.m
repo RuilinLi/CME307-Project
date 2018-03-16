@@ -8,12 +8,9 @@ function [X] = admm2(D_sq, hat_D_sq, anchors, N_x_adj, N_a_adj, beta, eps, true_
     n_verts = size(D_sq, 1);
     d = size(anchors, 1);
     
-    %X = randn(d * n_verts, 1);
-    %Y = randn(d * n_verts, 1);
-    
-    X = true_x(:);
-    Y = true_x(:);
-    S = randn(d * n_verts, 1);
+    X = zeros(d * n_verts, 1);
+    Y = zeros(d * n_verts, 1);
+    S = zeros(d * n_verts, 1);
     
     for i = 1:max_it
         % Solve system in X
@@ -33,6 +30,9 @@ function [X] = admm2(D_sq, hat_D_sq, anchors, N_x_adj, N_a_adj, beta, eps, true_
         % Update dual variables
         S = S - beta * (X - Y);
     end
+    
+    % Take average of X and Y for extra UMPH!!!!~
+    X = (X + Y) / 2;
 end
 
 % Compute the value of the objective function f(X, Y)
@@ -104,7 +104,7 @@ function [grad] = gradient_X_f(X, Y, D_sq, hat_D_sq, anchors, N_x_adj, N_a_adj)
             aj = anchors(:, j);
 
             grad(i_range) = grad(i_range) - ...
-                2 * xi * ((aj - xi)' * (aj - yi) - hat_D_sq(j, i));
+                2 * (aj - yi) * ((aj - xi)' * (aj - yi) - hat_D_sq(j, i));
         end
     end
 end
@@ -113,12 +113,12 @@ end
 function [grad] = gradient_X_lagrangian(X, Y, S, D_sq, hat_D_sq, anchors, ...
     N_x_adj, N_a_adj, beta)
     grad = gradient_X_f(X, Y, D_sq, hat_D_sq, anchors, N_x_adj, N_a_adj) - ...
-        S' * X + beta * (X - Y);
+        S + beta * (X - Y);
 end
 
 % Compute the gradient of the lagrangian in Y
 function [grad] = gradient_Y_lagrangian(X, Y, S, D_sq, hat_D_sq, anchors, ...
     N_x_adj, N_a_adj, beta)
-    grad = gradient_X_f(X, Y, D_sq, hat_D_sq, anchors, N_x_adj, N_a_adj) + ...
-        S' * Y + beta * (X - Y);
+    grad = gradient_X_f(Y, X, D_sq, hat_D_sq, anchors, N_x_adj, N_a_adj) + ...
+        S + beta * (Y - X);
 end

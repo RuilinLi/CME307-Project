@@ -107,7 +107,7 @@ function main(dimension,n_anchor,n_sensor,method, r, plot)
       
     case 'ADMM'
           
-      beta = 0.1;
+      beta = 1;
       eps = 1E-2;
       X = admm2(D_sq, hat_D_sq, anchor, N_x_adj, N_a_adj, beta, eps, sensor);
       f = @(Y) compute_value(Y,anchor,D_sq,hat_D_sq, N_x_adj,N_a_adj);
